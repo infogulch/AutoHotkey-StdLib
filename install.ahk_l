@@ -1,3 +1,4 @@
+; TODO: abstract downloader part into this script so downloads can be done via command line
 
 ; try to write to the first script arg dir
 ; if it didn't work:

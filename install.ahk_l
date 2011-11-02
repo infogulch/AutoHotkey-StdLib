@@ -1,0 +1,10 @@
+
+; try to write to the first script arg dir
+; if it didn't work:
+if not A_IsAdmin
+{
+   Run *RunAs "%A_ScriptFullPath%"  ; Requires v1.0.92.01+
+   ExitApp
+}
+
+; copy all files from second script arg dir to first script arg dir

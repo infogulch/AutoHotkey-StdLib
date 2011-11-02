@@ -1,0 +1,133 @@
+#SingleInstance, Force
+#NoEnv
+    
+    global iahklib
+    iahklib := new ahklib()
+return
+
+#Include ..\AsyncHttp\AsyncHttp.ahk
+#Include ..\LSON\LSON.ahk
+#Include ..\CGUI\lib\CGUI.ahk
+
+class ahklib extends CGUI {
+    Title := "Download libraries"
+    CloseOnEscape := true
+    DestroyOnClose := true
+    
+    txtLibraryType   := this.AddControl("Text", "txtLibraryType", "", "Library type:")
+    comboLibraryType := this.AddControl("ComboBox", "comboLibraryType", "x100 yp w95", "StdLib||UserLib|Custom...")
+    edtLibLocation  := this.AddControl("Edit", "edtLibLocation", "x+5 yp w200 readonly", "")
+    
+    txtPackages := this.AddControl("text", "txtPackages", "xm", "Select package:")
+    ddlPackages := this.AddControl("DropDownList", "ddlPackages", "x100 yp w95", "(custom)||")
+    btnRefresh  := this.AddControl("Button", "btnRefresh", "x+5 yp", "Refresh List")
+    btnRefresh_Click := ahklib.RefreshList
+    
+    lvDownloads := this.AddControl("ListView", "lvDownloads", "xm w400 h300 checked", "|Name|Description|Current|Installed")
+    
+    btnInstall := this.AddControl("Button", "btnInstall", "xm", "Install Selected")
+    
+    status1 := this.AddControl("StatusBar", "status1", "", "Loading...")
+    
+    static libraries := [], reqs := []
+    
+    __new() {
+        this.Show()
+        this.RefreshList()
+    }
+    
+    RefreshList() {
+        this.DownloadList()
+        this.UpdateList()
+    }
+    
+    DownloadList() {
+        this.status1.text := "Loading list of libraries..."
+        
+        reqs := new AsyncHttp()
+        reqs.Request("get", "https://api.github.com/orgs/ahklib/repos")
+        if !reqs.Wait(10)
+            ExitError("Didn't receive repos list!")
+        
+        this.status1.text := "Getting libraries details..."
+        
+        reqs.callbacks := { OnResponseFinished: ahklib.AddItem }
+        
+        for i, repo in LSON(reqs.remove(1).whr.responsetext)
+            if (repo.name != "AutoHotkey-StdLib")
+            {
+                if !ahklib.libraries.HasKey(repo.name)
+                    ahklib.libraries.insert(repo.name, [])
+                ahklib.reqs[reqs.request("get", repo.url)] := { name: repo.name, type: "details" }
+                url := "https://api.github.com/repos/ahklib/" repo.name "/tags"
+                ahklib.reqs[reqs.request("get", url)]      := { name: repo.name, type: "downloads" }
+            }
+        
+        ahklib.reqstart := A_TickCount
+        while !reqs.wait(0)
+        {
+            sleep 100
+            if (A_TickCount - ahklib.reqstart > 10000)
+                ExitError("Timed out getting repos!")
+        }
+        
+        this.status1.text := "Libraries details downloaded."
+    }
+    
+    AddItem() {
+        idx := this.idx
+        reqs := Object(this.pthis)
+        
+        if ahklib.reqs.HasKey(idx)
+        {
+            ahklib.reqstart := A_TickCount
+            req := ahklib.reqs.remove(idx, "")
+            lib := ahklib.libraries[req.name]
+            lib[req.type] := LSON(reqs[idx].whr.ResponseText)
+        }
+    }
+    
+    UpdateList() {
+        this.status1.text := "Refresing list"
+        this.lvDownloads.items.Clear()
+        ; save/restore changes
+        for name,lib in ahklib.libraries
+            this.lvDownloads.items.Add("col2", name, lib.details.description, lib.downloads[1].name, "")
+        ; column resize...
+        ; order list
+        this.status1.text := "Ready."
+    }
+    
+    btnInstall_Click() {
+        if InStr(FileExist(this.edtLibLocation.text), "D")
+        {
+            ; get temp dir
+            ; clear dir
+            ; download all selected libraries to dir
+            this.status1.text := "Starting installer..."
+            
+            ; do something different when A_IsCompiled
+            run % "install.ahk_l """ this.edtLibLocation.text """ "
+        }
+        else
+            this.status1.text := "Invalid library install location"
+    }
+    
+    PostDestroy() {
+        ExitApp
+    }
+}
+
+ExitError(error = "`r") {
+    if (error != "`r")
+        msgbox % error
+    ExitApp
+}
+
+; ** https://api.github.com/orgs/ahklib/repos
+; ** https://api.github.com/repos/ahklib/LSON
+; ** https://api.github.com/repos/ahklib/LSON/tags
+; https://api.github.com/repos/ahklib/LSON/branches
+; https://api.github.com/repos/ahklib/LSON/git/trees/68e51adf6ded6d4c82a36d50aa59c858b45bce7c
+; https://api.github.com/repos/ahklib/LSON/git/blobs/9aa860965383723fa466fbf838edf8b1a54a72f2
+; https://api.github.com/repos/ahklib/LSON/downloads

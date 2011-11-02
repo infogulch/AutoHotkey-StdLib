@@ -5,6 +5,8 @@
     iahklib := new ahklib()
 return
 
+; TODO: add details pane for currently selected row item
+
 #Include ..\AsyncHttp\AsyncHttp.ahk
 #Include ..\LSON\LSON.ahk
 #Include ..\CGUI\lib\CGUI.ahk
@@ -90,7 +92,8 @@ class ahklib extends CGUI {
     UpdateList() {
         this.status1.text := "Refresing list"
         this.lvDownloads.items.Clear()
-        ; save/restore changes
+        ; save/restore checked items
+        ; TODO: search lib.downloads for latest version; group tag names that point to the same hash
         for name,lib in ahklib.libraries
             this.lvDownloads.items.Add("col2", name, lib.details.description, lib.downloads[1].name, "")
         ; column resize...

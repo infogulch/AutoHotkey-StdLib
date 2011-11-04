@@ -46,7 +46,7 @@ class ahklib extends CGUI {
     RefreshList() {
         this.lvDownloads.items.Clear()
         this.DownloadList()
-        ; this.UpdateCheckmarks()
+        this.UpdateCheckmarks()
         this.status1.Text := "Ready."
     }
     
@@ -101,14 +101,13 @@ class ahklib extends CGUI {
             lib[req.type] := LSON(reqs[idx].whr.ResponseText)
             
             if (req.type = "details")
-                lib.row[3] := lib.details.description
+                lib.row[3] := Ellipse(lib.details.description, 40)
             else
                 lib.row[4] := lib.downloads[1].name
             
             for name, lib in iahklib.libraries
                 x .= name ": " lib.custom_checked
         }
-        
     }
     
     UpdateCheckmarks() {
@@ -120,8 +119,10 @@ class ahklib extends CGUI {
         }
         ; column resize...
         ; order list
+    }
+    
+    lvDownloads_CheckedChange( row ) {
         
-        this.lvDownloads.ModifyCol(2)
     }
     
     btnInstall_Click() {
@@ -145,7 +146,9 @@ class ahklib extends CGUI {
 }
 
 Ellipse(text, length) {
-    
+    if StrLen(text) > length
+        text := SubStr(text, 1, length-3) "..."
+    return text
 }
 
 ExitError(error = "`r") {

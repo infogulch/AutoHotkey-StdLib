@@ -47,6 +47,8 @@ class ahklib extends CGUI {
         this.lvDownloads.items.Clear()
         this.DownloadList()
         ; this.UpdateCheckmarks()
+        Loop, 5
+            this.lvDownloads.ModifyCol(A_Index,"AutoHdr")
         this.status1.Text := "Ready."
     }
     

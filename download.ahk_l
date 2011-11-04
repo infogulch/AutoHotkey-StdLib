@@ -18,7 +18,7 @@ class ahklib extends CGUI {
     DestroyOnClose := true
     
     txtLibraryType   := this.AddControl("Text", "txtLibraryType", "", "Library type:")
-    comboLibraryType := this.AddControl("ComboBox", "comboLibraryType", "x100 yp w95", "StdLib||UserLib|Custom...")
+    comboLibraryType := this.AddControl("ComboBox", "comboLibraryType", "x100 yp w95", "StdLib||UserLib|Custom")
     edtLibLocation  := this.AddControl("Edit", "edtLibLocation", "x+5 yp w200 readonly", "")
     
     txtPackages := this.AddControl("text", "txtPackages", "xm", "Select package:")
@@ -40,6 +40,7 @@ class ahklib extends CGUI {
     
     __new() {
         this.lvDownloads.IndependentSorting := True
+        this.comboLibraryType.SelectedIndex := 1
         this.Show()
     }
     
@@ -102,20 +103,17 @@ class ahklib extends CGUI {
             lib := iahklib.libraries[req.name]
             lib[req.type] := LSON(reqs[idx].whr.ResponseText)
             
+            ; TODO: search lib.downloads for latest version; group tag names that point to the same hash
             if (req.type = "details")
                 lib.row[3] := Ellipse(lib.details.description, 40)
             else
                 lib.row[4] := lib.downloads[1].name
-            
-            for name, lib in iahklib.libraries
-                x .= name ": " lib.custom_checked
         }
     }
     
     UpdateCheckmarks() {
         this.status1.Text := "Refresing list"
         ; save/restore checked items
-        ; TODO: search lib.downloads for latest version; group tag names that point to the same hash
         for name,lib in iahklib.libraries
         {
         }
@@ -123,8 +121,39 @@ class ahklib extends CGUI {
         ; order list
     }
     
+    comboLibraryType_SelectionChanged( item ) {
+        if item.text = "StdLib"
+        {
+            ; TODO: look up location of executable that runs .ahk files from registry (this script might be compiled)
+            ; TODO: choice of file extensions
+            this.edtLibLocation.text := A_ProgramFiles "\AutoHotkey\lib"
+            ;! disable control
+        }
+        if item.text = "UserLib"
+        {
+            this.edtLibLocation.text := A_MyDocuments
+            ;!disable control
+        }
+        if item.text = "Custom"
+        {
+            this.edtLibLocation.text := ""
+            ;!enable control
+        }
+    }
+    
     lvDownloads_CheckedChange( row ) {
-        
+        if (this.ddlPackages.SelectedIndex != 1)
+        {
+            this.ddlPackages.SelectedIndex := 1
+            for i, row in this.ddlPackages
+                this.libraries[row[2]].custom_checked := row.Checked
+        }
+        else
+            this.libraries[row[2]].custom_checked := row.Checked
+    }
+    
+    lvDownloads_SelectionChanged( row ) {
+        this.edtDetails.text := this.libraries[row[2]].details.description
     }
     
     btnInstall_Click() {

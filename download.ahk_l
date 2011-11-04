@@ -3,13 +3,14 @@
     
     global iahklib
     iahklib := new ahklib()
+    iahklib.RefreshList()
 return
 
 ; TODO: add details pane for currently selected row item
 
 #Include ..\AsyncHttp\AsyncHttp.ahk
 #Include ..\LSON\LSON.ahk
-#Include ..\CGUI\lib\CGUI.ahk
+#Include <CGUI>
 
 class ahklib extends CGUI {
     Title := "Download libraries"
@@ -25,80 +26,102 @@ class ahklib extends CGUI {
     btnRefresh  := this.AddControl("Button", "btnRefresh", "x+5 yp", "Refresh List")
     btnRefresh_Click := ahklib.RefreshList
     
-    lvDownloads := this.AddControl("ListView", "lvDownloads", "xm w400 h300 checked", "|Name|Description|Current|Installed")
+    lvDownloads := this.AddControl("ListView", "lvDownloads", "xm w400 h200 checked", "|Name|Description|Current|Installed")
+    
+    edtDetails   := this.AddControl("Edit", "edtDetails", "wp h100", "")
     
     btnInstall := this.AddControl("Button", "btnInstall", "xm", "Install Selected")
     
     status1 := this.AddControl("StatusBar", "status1", "", "Loading...")
     
-    static libraries := [], reqs := []
+    libraries := []
+    reqs := []
+    reqstart := 0
     
     __new() {
+        this.lvDownloads.IndependentSorting := True
         this.Show()
-        this.RefreshList()
     }
     
     RefreshList() {
+        this.lvDownloads.items.Clear()
         this.DownloadList()
-        this.UpdateList()
+        ; this.UpdateCheckmarks()
+        this.status1.Text := "Ready."
     }
     
     DownloadList() {
-        this.status1.text := "Loading list of libraries..."
+        this.status1.Text := "Loading list of libraries..."
         
         reqs := new AsyncHttp()
         reqs.Request("get", "https://api.github.com/orgs/ahklib/repos")
         if !reqs.Wait(10)
             ExitError("Didn't receive repos list!")
         
-        this.status1.text := "Getting libraries details..."
-        
         reqs.callbacks := { OnResponseFinished: ahklib.AddItem }
         
-        for i, repo in LSON(reqs.remove(1).whr.responsetext)
+        this.status1.Text := "Getting libraries details..."
+        
+        for i, repo in LSON(reqs[1].whr.responsetext)
             if (repo.name != "AutoHotkey-StdLib")
             {
-                if !ahklib.libraries.HasKey(repo.name)
-                    ahklib.libraries.insert(repo.name, [])
-                ahklib.reqs[reqs.request("get", repo.url)] := { name: repo.name, type: "details" }
+                if !this.libraries.HasKey(repo.name)
+                    this.libraries[repo.name] := { custom_checked: False }
+                this.libraries[repo.name].row := this.lvDownloads.items.Add("col2 " (this.libraries[repo.name].custom_checked ? "checked" : "") , repo.name)
+                this.reqs[reqs.request("get", repo.url)] := { name: repo.name, type: "details" }
                 url := "https://api.github.com/repos/ahklib/" repo.name "/tags"
-                ahklib.reqs[reqs.request("get", url)]      := { name: repo.name, type: "downloads" }
+                this.reqs[reqs.request("get", url)]      := { name: repo.name, type: "downloads" }
             }
         
-        ahklib.reqstart := A_TickCount
+        this.reqstart := A_TickCount
         while !reqs.wait(0)
         {
             sleep 100
-            if (A_TickCount - ahklib.reqstart > 10000)
+            if (A_TickCount - this.reqstart > 10000)
                 ExitError("Timed out getting repos!")
         }
         
-        this.status1.text := "Libraries details downloaded."
+        this.status1.Text := "Libraries details downloaded."
     }
     
+    ; This function is called via RegisterCallback from AsyncHttp
+    ; The first arg (`this`) is an object which contains a 
+    ;    pointer to the request object in key pthis and the 
+    ;    request object's index for this http request in idx
     AddItem() {
         idx := this.idx
         reqs := Object(this.pthis)
         
-        if ahklib.reqs.HasKey(idx)
+        if iahklib.reqs.HasKey(idx)
         {
-            ahklib.reqstart := A_TickCount
-            req := ahklib.reqs.remove(idx, "")
-            lib := ahklib.libraries[req.name]
+            iahklib.reqstart := A_TickCount
+            req := iahklib.reqs.remove(idx, "")
+            
+            lib := iahklib.libraries[req.name]
             lib[req.type] := LSON(reqs[idx].whr.ResponseText)
+            
+            if (req.type = "details")
+                lib.row[3] := lib.details.description
+            else
+                lib.row[4] := lib.downloads[1].name
+            
+            for name, lib in iahklib.libraries
+                x .= name ": " lib.custom_checked
         }
+        
     }
     
-    UpdateList() {
-        this.status1.text := "Refresing list"
-        this.lvDownloads.items.Clear()
+    UpdateCheckmarks() {
+        this.status1.Text := "Refresing list"
         ; save/restore checked items
         ; TODO: search lib.downloads for latest version; group tag names that point to the same hash
-        for name,lib in ahklib.libraries
-            this.lvDownloads.items.Add("col2", name, lib.details.description, lib.downloads[1].name, "")
+        for name,lib in iahklib.libraries
+        {
+        }
         ; column resize...
         ; order list
-        this.status1.text := "Ready."
+        
+        this.lvDownloads.ModifyCol(2)
     }
     
     btnInstall_Click() {
@@ -119,6 +142,10 @@ class ahklib extends CGUI {
     PostDestroy() {
         ExitApp
     }
+}
+
+Ellipse(text, length) {
+    
 }
 
 ExitError(error = "`r") {

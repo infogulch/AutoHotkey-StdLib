@@ -8,18 +8,17 @@ return
 
 ; TODO: add details pane for currently selected row item
 
-#Include ..\AsyncHttp\AsyncHttp.ahk
-#Include ..\LSON\LSON.ahk
-#Include <CGUI>
+#Include AsyncHttp\AsyncHttp.ahk
+#Include LSON\LSON.ahk
 
 class ahklib extends CGUI {
     Title := "Download libraries"
     CloseOnEscape := true
     DestroyOnClose := true
     
-    txtLibraryType   := this.AddControl("Text", "txtLibraryType", "", "Library type:")
-    comboLibraryType := this.AddControl("ComboBox", "comboLibraryType", "x100 yp w95", "StdLib||UserLib|Custom")
-    edtLibLocation  := this.AddControl("Edit", "edtLibLocation", "x+5 yp w200 readonly", "")
+    txtLibLoc := this.AddControl("Text", "txtLibLoc", "", "Library type:")
+    ddlLibLoc := this.AddControl("DropDownList", "ddlLibLoc", "x100 yp w95", "StdLib||UserLib|Custom")
+    edtLibLoc := this.AddControl("Edit", "edtLibLoc", "x+5 yp w200", "")
     
     txtPackages := this.AddControl("text", "txtPackages", "xm", "Select package:")
     ddlPackages := this.AddControl("DropDownList", "ddlPackages", "x100 yp w95", "(custom)||")
@@ -40,7 +39,6 @@ class ahklib extends CGUI {
     
     __new() {
         this.lvDownloads.IndependentSorting := True
-        this.comboLibraryType.SelectedIndex := 1
         this.Show()
     }
     
@@ -122,23 +120,23 @@ class ahklib extends CGUI {
         ; order list
     }
     
-    comboLibraryType_SelectionChanged( item ) {
-        if item.text = "StdLib"
+    ddlLibLoc_SelectionChanged( item ) {
+        if (item.text = "StdLib")
         {
             ; TODO: look up location of executable that runs .ahk files from registry (this script might be compiled)
             ; TODO: choice of file extensions
-            this.edtLibLocation.text := A_ProgramFiles "\AutoHotkey\lib"
-            ;! disable control
+            this.edtLibLoc.text := A_AhkPath
+            this.edtLibLoc.ReadOnly := True
         }
-        if item.text = "UserLib"
+        else if (item.text = "UserLib")
         {
-            this.edtLibLocation.text := A_MyDocuments
-            ;!disable control
+            this.edtLibLoc.text := A_MyDocuments
+            this.edtLibLoc.ReadOnly := True
         }
-        if item.text = "Custom"
+        else if (item.text = "Custom")
         {
-            this.edtLibLocation.text := ""
-            ;!enable control
+            this.edtLibLoc.text := ""
+            this.edtLibLoc.ReadOnly := False
         }
     }
     
@@ -158,7 +156,7 @@ class ahklib extends CGUI {
     }
     
     btnInstall_Click() {
-        if InStr(FileExist(this.edtLibLocation.text), "D")
+        if InStr(FileExist(this.edtLibLoc.text), "D")
         {
             ; get temp dir
             ; clear dir
@@ -166,7 +164,7 @@ class ahklib extends CGUI {
             this.status1.text := "Starting installer..."
             
             ; do something different when A_IsCompiled
-            run % "install.ahk_l """ this.edtLibLocation.text """ "
+            run % "install.ahk_l """ this.edtLibLoc.text """ "
         }
         else
             this.status1.text := "Invalid library install location"

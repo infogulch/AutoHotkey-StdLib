@@ -1,12 +1,12 @@
 [submodule "LSON"]
 	path = LSON
-	url = git@github.com:infogulch/LSON.git
+	url = git://github.com/infogulch/LSON.git
 [submodule "AsyncHttp"]
 	path = AsyncHttp
-	url = git@github.com:infogulch/AsyncHttp.git
+	url = git://github.com/infogulch/AsyncHttp.git
 [submodule "CGUI"]
 	path = CGUI
-	url = git@github.com:infogulch/CGUI.git
+	url = git://github.com/infogulch/CGUI.git
 [submodule "WinHttpRequest"]
 	path = WinHttpRequest
-	url = git@github.com:infogulch/WinHttpRequest.git
+	url = git://github.com/infogulch/WinHttpRequest.git
